@@ -22,3 +22,18 @@ func (d DNSResolver) Resolve(ctx context.Context, name string) (context.Context,
 	}
 	return ctx, addr.IP, err
 }
+
+// RewriteResolver rewrites host names
+type RewriteResolver map[string]string
+
+var dnsResolver = DNSResolver{}
+
+// Resolve implements NameResolver interface
+func (r RewriteResolver) Resolve(ctx context.Context, name string) (context.Context, net.IP, error) {
+	if r != nil {
+		if rewrite, ok := r[name]; ok {
+			name = rewrite
+		}
+	}
+	return dnsResolver.Resolve(ctx, name)
+}
