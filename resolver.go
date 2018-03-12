@@ -3,7 +3,7 @@ package socks5
 import (
 	"net"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // NameResolver is used to implement custom name resolution
@@ -14,6 +14,7 @@ type NameResolver interface {
 // DNSResolver uses the system DNS to resolve host names
 type DNSResolver struct{}
 
+// Resolve implements NameResolver interface
 func (d DNSResolver) Resolve(ctx context.Context, name string) (context.Context, net.IP, error) {
 	addr, err := net.ResolveIPAddr("ip", name)
 	if err != nil {

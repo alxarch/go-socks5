@@ -6,8 +6,10 @@ import (
 )
 
 const (
-	NoAuth          = uint8(0)
-	noAcceptable    = uint8(255)
+	// NoAuth disable authentication
+	NoAuth       = uint8(0)
+	noAcceptable = uint8(255)
+	// UserPassAuth authentication with username/password credentials
 	UserPassAuth    = uint8(2)
 	userAuthVersion = uint8(1)
 	authSuccess     = uint8(0)
@@ -15,12 +17,13 @@ const (
 )
 
 var (
-	UserAuthFailed  = fmt.Errorf("User authentication failed")
-	NoSupportedAuth = fmt.Errorf("No supported authentication mechanism")
+	// ErrUserAuthFailed indicates a failed authentication attempt
+	ErrUserAuthFailed = fmt.Errorf("User authentication failed")
+	// ErrNoSupportedAuth indicates an authentication attempt with an unsupported auth mechanism
+	ErrNoSupportedAuth = fmt.Errorf("No supported authentication mechanism")
 )
 
-// A Request encapsulates authentication state provided
-// during negotiation
+// AuthContext encapsulates authentication state provided during negotiation
 type AuthContext struct {
 	// Provided auth method
 	Method uint8
@@ -30,6 +33,7 @@ type AuthContext struct {
 	Payload map[string]string
 }
 
+// Authenticator is the interface for authentication mechanisms
 type Authenticator interface {
 	Authenticate(reader io.Reader, writer io.Writer) (*AuthContext, error)
 	GetCode() uint8
@@ -38,25 +42,28 @@ type Authenticator interface {
 // NoAuthAuthenticator is used to handle the "No Authentication" mode
 type NoAuthAuthenticator struct{}
 
+// GetCode implements Authenticator interface
 func (a NoAuthAuthenticator) GetCode() uint8 {
 	return NoAuth
 }
 
+// Authenticate implements Authenticator interface
 func (a NoAuthAuthenticator) Authenticate(reader io.Reader, writer io.Writer) (*AuthContext, error) {
 	_, err := writer.Write([]byte{socks5Version, NoAuth})
 	return &AuthContext{NoAuth, nil}, err
 }
 
-// UserPassAuthenticator is used to handle username/password based
-// authentication
+// UserPassAuthenticator is used to handle username/password based authentication
 type UserPassAuthenticator struct {
 	Credentials CredentialStore
 }
 
+// GetCode implements Authenticator interface
 func (a UserPassAuthenticator) GetCode() uint8 {
 	return UserPassAuth
 }
 
+// Authenticate implements Authenticator interface
 func (a UserPassAuthenticator) Authenticate(reader io.Reader, writer io.Writer) (*AuthContext, error) {
 	// Tell the client to use user/pass auth
 	if _, err := writer.Write([]byte{socks5Version, UserPassAuth}); err != nil {
@@ -102,7 +109,7 @@ func (a UserPassAuthenticator) Authenticate(reader io.Reader, writer io.Writer) 
 		if _, err := writer.Write([]byte{userAuthVersion, authFailure}); err != nil {
 			return nil, err
 		}
-		return nil, UserAuthFailed
+		return nil, ErrUserAuthFailed
 	}
 
 	// Done
@@ -133,7 +140,7 @@ func (s *Server) authenticate(conn io.Writer, bufConn io.Reader) (*AuthContext, 
 // authentication mechanism
 func noAcceptableAuth(conn io.Writer) error {
 	conn.Write([]byte{socks5Version, noAcceptable})
-	return NoSupportedAuth
+	return ErrNoSupportedAuth
 }
 
 // readMethods is used to read the number of methods
